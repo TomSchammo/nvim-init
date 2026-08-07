@@ -53,82 +53,36 @@ vim.o.autoread = true
 -- one status bar, not sure if I prefer that
 vim.o.laststatus = 3
 
+---------------------------------------------------------------
+-- .h are C header files, .hpp C++ header files
+---------------------------------------------------------------
+
+-- Set filetype of .h files (C header) to 'C' (instead of 'C++')
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+  pattern = "*.h",
+  command = "set filetype=c",
+})
 
 ---------------------------------------------------------------
--- LSP
+-- Splits and Tabbed Files
 ---------------------------------------------------------------
+vim.cmd([[set splitbelow splitright]])
 
-vim.pack.add {
-  { src = 'https://github.com/neovim/nvim-lspconfig' },
-}
+-- Remap splits navigation to just <leader> + arrow keys
+vim.keymap.set("n", "<leader><left>", "<C-w>h", { noremap = true })
+vim.keymap.set("n", "<leader><down>", "<C-w>j", { noremap = true })
+vim.keymap.set("n", "<leader><up>", "<C-w>k", { noremap = true })
+vim.keymap.set("n", "<leader><right>", "<C-w>l", { noremap = true })
 
-vim.o.autocomplete = true
-vim.o.completeopt = 'menu,menuone,noselect,popup'
-vim.o.pumborder = 'rounded' -- optional
-vim.o.pummaxwidth = 40      -- optional
+-- Make adjusting split sizes a bit more friendly
+vim.keymap.set("n", "<C-Left>", "<cmd>vertical resize +3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-Right>", "<cmd>vertical resize -3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-Up>", "<cmd>resize +3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-Down>", "<cmd>resize -3<CR>", { noremap = true, silent = true })
 
-vim.api.nvim_create_autocmd('LspAttach', {
-  callback = function(ev)
-    local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client and client:supports_method('textDocument/completion') then
-      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
-    end
-  end,
-})
-
--- diagnostics
-vim.diagnostic.config({ virtual_text = true })
-vim.keymap.set("n", "<leader>E", "<cmd>lua vim.diagnostic.open_float(nil, {focus=false})<cr>", { buffer = bufnr })
-
-
-local function pum(yes, no)
-  return function() return vim.fn.pumvisible() == 1 and yes or no end
-end
-
-vim.keymap.set("i", "<Tab>", pum("<C-n>", "<Tab>"), { expr = true })
-vim.keymap.set("i", "<S-Tab>", pum("<C-p>", "<S-Tab>"), { expr = true })
-vim.keymap.set("i", "<CR>", pum("<C-y>", "<CR>"), { expr = true })
-
--- snippet jumps (native expansion uses vim.snippet, not luasnip)
-vim.keymap.set({ "i", "s" }, "<C-l>", function()
-  return vim.snippet.active({ direction = 1 }) and "<Cmd>lua vim.snippet.jump(1)<CR>" or "<C-l>"
-end, { expr = true })
-vim.keymap.set({ "i", "s" }, "<C-h>", function()
-  return vim.snippet.active({ direction = -1 }) and "<Cmd>lua vim.snippet.jump(-1)<CR>" or "<C-h>"
-end, { expr = true })
-
-
-local sev = vim.diagnostic.severity
-vim.diagnostic.config({
-  severity_sort = true,
-  update_in_insert = false,
-  virtual_text = { current_line = true },
-  float = { border = 'rounded', source = true },
-  signs = { text = { [sev.ERROR] = 'E', [sev.WARN] = 'W', [sev.INFO] = 'I', [sev.HINT] = 'H' } },
-})
-
-vim.api.nvim_create_autocmd('BufWritePre', {
-  callback = function(ev)
-    vim.lsp.buf.format({ bufnr = ev.buf, timeout_ms = 2000 })
-  end,
-})
-
--- neovim-lua support
-vim.lsp.config('lua_ls', {
-  settings = {
-    Lua = {
-      runtime = { version = 'LuaJIT' },
-      workspace = {
-        checkThirdParty = false,
-        -- every lua/ dir on the rtp: nvim's own meta files plus the plugins
-        -- added by vim.pack, so require('oil') & co. get types too
-        library = vim.api.nvim_get_runtime_file('lua', true),
-      },
-    },
-  },
-})
-
-vim.lsp.enable({ "lua_ls", "clangd", "rust_analyzer" })
+-- Change 2 split windows from vert to horiz or horiz to vert
+vim.keymap.set("", "<C-w>v", "<C-w>t<C-w>H")
+vim.keymap.set("", "<C-w>h", "<C-w>t<C-w>K")
 
 ---------------------------------------------------------------
 -- Colorscheme
@@ -233,36 +187,67 @@ for group, opts in pairs(hl) do
 end
 
 ---------------------------------------------------------------
--- .h are C header files, .hpp C++ header files
+-- Status Line
 ---------------------------------------------------------------
 
--- Set filetype of .h files (C header) to 'C' (instead of 'C++')
-vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
-  pattern = "*.h",
-  command = "set filetype=c",
+local pms = vim.api.nvim_get_hl(0, { name = "PmenuSel", link = false })
+local dir = vim.api.nvim_get_hl(0, { name = "Directory", link = false })
+local vis = vim.api.nvim_get_hl(0, { name = "Visual", link = false })
+vim.api.nvim_set_hl(0, "StlMode", { fg = pms.fg, bg = vis.bg })
+vim.api.nvim_set_hl(0, "StlGit", { fg = dir.fg, bg = pms.bg })
+
+local modes = {
+  n = "NORMAL",
+  i = "INSERT",
+  v = "VISUAL",
+  V = "V-LINE",
+  ["\22"] = "V-BLOCK",
+  c = "COMMAND",
+  t = "TERMINAL",
+  R = "REPLACE",
+  s = "SELECT",
+  S = "S-LINE",
+  ["\19"] = "S-BLOCK",
+}
+
+function _G._statusline()
+  local mode = modes[vim.fn.mode()] or vim.fn.mode():upper()
+  local branch = vim.b.git_branch and "%#StlGit# " .. vim.b.git_branch .. " %*" or ""
+  local path = vim.b.rel_path or "%f"
+
+  local diag = ""
+  local counts = vim.diagnostic.count(0) or {}
+  local labels = { " ", " ", " ", " " }
+  local hls = { "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint" }
+  for i = 1, 4 do
+    if counts[i] and counts[i] > 0 then
+      diag = diag .. "%#" .. hls[i] .. "#" .. labels[i] .. counts[i] .. "%* "
+    end
+  end
+
+  return "%#StlMode# " .. mode .. " %*" .. branch .. " " .. path .. "%=" .. diag .. vim.bo.filetype .. " %l:%c"
+end
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  callback = function()
+    local root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("%s+$", "")
+    if root ~= "" then
+      vim.b.git_branch = vim.fn.system("git branch --show-current 2>/dev/null"):gsub("%s+$", "")
+      vim.b.rel_path = vim.fn.expand("%:p"):sub(#root + 2)
+    else
+      vim.b.git_branch = nil
+      vim.b.rel_path = vim.fn.expand("%:p:~")
+    end
+  end,
 })
 
----------------------------------------------------------------
--- Splits and Tabbed Files
----------------------------------------------------------------
-vim.cmd([[set splitbelow splitright]])
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  callback = function()
+    vim.cmd("redrawstatus!")
+  end,
+})
 
--- Remap splits navigation to just <leader> + arrow keys
-vim.keymap.set("n", "<leader><left>", "<C-w>h", { noremap = true })
-vim.keymap.set("n", "<leader><down>", "<C-w>j", { noremap = true })
-vim.keymap.set("n", "<leader><up>", "<C-w>k", { noremap = true })
-vim.keymap.set("n", "<leader><right>", "<C-w>l", { noremap = true })
-
--- Make adjusting split sizes a bit more friendly
-vim.keymap.set("n", "<C-Left>", "<cmd>vertical resize +3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Right>", "<cmd>vertical resize -3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Up>", "<cmd>resize +3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Down>", "<cmd>resize -3<CR>", { noremap = true, silent = true })
-
--- Change 2 split windows from vert to horiz or horiz to vert
-vim.keymap.set("", "<C-w>v", "<C-w>t<C-w>H")
-vim.keymap.set("", "<C-w>h", "<C-w>t<C-w>K")
-
+vim.o.statusline = "%!v:lua._statusline()"
 
 ---------------------------------------------------------------
 -- Custom Line Wrapping Behaviour
@@ -362,6 +347,82 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 vim.api.nvim_create_user_command("ToggleVisualNav", toggle_visual_nav, {})
+
+---------------------------------------------------------------
+-- LSP
+---------------------------------------------------------------
+
+vim.pack.add {
+  { src = 'https://github.com/neovim/nvim-lspconfig' },
+}
+
+vim.o.autocomplete = true
+vim.o.completeopt = 'menu,menuone,noselect,popup'
+vim.o.pumborder = 'rounded' -- optional
+vim.o.pummaxwidth = 40      -- optional
+
+vim.api.nvim_create_autocmd('LspAttach', {
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if client and client:supports_method('textDocument/completion') then
+      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+    end
+  end,
+})
+
+-- diagnostics
+vim.diagnostic.config({ virtual_text = true })
+vim.keymap.set("n", "<leader>E", "<cmd>lua vim.diagnostic.open_float(nil, {focus=false})<cr>", { buffer = bufnr })
+
+
+local function pum(yes, no)
+  return function() return vim.fn.pumvisible() == 1 and yes or no end
+end
+
+vim.keymap.set("i", "<Tab>", pum("<C-n>", "<Tab>"), { expr = true })
+vim.keymap.set("i", "<S-Tab>", pum("<C-p>", "<S-Tab>"), { expr = true })
+vim.keymap.set("i", "<CR>", pum("<C-y>", "<CR>"), { expr = true })
+
+-- snippet jumps (native expansion uses vim.snippet, not luasnip)
+vim.keymap.set({ "i", "s" }, "<C-l>", function()
+  return vim.snippet.active({ direction = 1 }) and "<Cmd>lua vim.snippet.jump(1)<CR>" or "<C-l>"
+end, { expr = true })
+vim.keymap.set({ "i", "s" }, "<C-h>", function()
+  return vim.snippet.active({ direction = -1 }) and "<Cmd>lua vim.snippet.jump(-1)<CR>" or "<C-h>"
+end, { expr = true })
+
+
+local sev = vim.diagnostic.severity
+vim.diagnostic.config({
+  severity_sort = true,
+  update_in_insert = false,
+  virtual_text = { current_line = true },
+  float = { border = 'rounded', source = true },
+  signs = { text = { [sev.ERROR] = 'E', [sev.WARN] = 'W', [sev.INFO] = 'I', [sev.HINT] = 'H' } },
+})
+
+vim.api.nvim_create_autocmd('BufWritePre', {
+  callback = function(ev)
+    vim.lsp.buf.format({ bufnr = ev.buf, timeout_ms = 2000 })
+  end,
+})
+
+-- neovim-lua support
+vim.lsp.config('lua_ls', {
+  settings = {
+    Lua = {
+      runtime = { version = 'LuaJIT' },
+      workspace = {
+        checkThirdParty = false,
+        -- every lua/ dir on the rtp: nvim's own meta files plus the plugins
+        -- added by vim.pack, so require('oil') & co. get types too
+        library = vim.api.nvim_get_runtime_file('lua', true),
+      },
+    },
+  },
+})
+
+vim.lsp.enable({ "lua_ls", "clangd", "rust_analyzer" })
 
 ---------------------------------------------------------------
 -- Plugins
