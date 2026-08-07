@@ -349,12 +349,30 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.api.nvim_create_user_command("ToggleVisualNav", toggle_visual_nav, {})
 
 ---------------------------------------------------------------
--- LSP
+-- Plugins
 ---------------------------------------------------------------
 
-vim.pack.add {
-  { src = 'https://github.com/neovim/nvim-lspconfig' },
-}
+-- install plugins
+vim.pack.add({
+  -- dependency for oil
+  'https://github.com/nvim-tree/nvim-web-devicons',
+
+  -- file explorer
+  'https://github.com/stevearc/oil.nvim',
+
+  -- git stuff
+  'https://github.com/lewis6991/gitsigns.nvim',
+
+  -- find files/live grep
+  'https://github.com/nvim-mini/mini.pick',
+
+  -- lsp configurations
+  'https://github.com/neovim/nvim-lspconfig',
+})
+
+---------------------------------------------------------------
+-- LSP
+---------------------------------------------------------------
 
 vim.o.autocomplete = true
 vim.o.completeopt = 'menu,menuone,noselect,popup'
@@ -423,25 +441,6 @@ vim.lsp.config('lua_ls', {
 })
 
 vim.lsp.enable({ "lua_ls", "clangd", "rust_analyzer" })
-
----------------------------------------------------------------
--- Plugins
----------------------------------------------------------------
-
--- install plugins
-vim.pack.add({
-  -- dependency for oil
-  'https://github.com/nvim-tree/nvim-web-devicons',
-
-  -- file explorer
-  'https://github.com/stevearc/oil.nvim',
-
-  -- git stuff
-  'https://github.com/lewis6991/gitsigns.nvim',
-
-  -- find files/live grep
-  'https://github.com/nvim-mini/mini.pick',
-})
 
 ---------------------------------------------------------------
 -- File Explorer
