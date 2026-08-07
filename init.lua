@@ -190,11 +190,9 @@ end
 -- Status Line
 ---------------------------------------------------------------
 
-local pms = vim.api.nvim_get_hl(0, { name = "PmenuSel", link = false })
-local dir = vim.api.nvim_get_hl(0, { name = "Directory", link = false })
-local vis = vim.api.nvim_get_hl(0, { name = "Visual", link = false })
-vim.api.nvim_set_hl(0, "StlMode", { fg = pms.fg, bg = vis.bg })
-vim.api.nvim_set_hl(0, "StlGit", { fg = dir.fg, bg = pms.bg })
+-- segment colors, brightest first: accent block, raised block, base bar.
+vim.api.nvim_set_hl(0, "StlMode", { fg = c.bg0, bg = c.blue, bold = true })
+vim.api.nvim_set_hl(0, "StlGit", { fg = c.yellow, bg = c.bg3 })
 
 local modes = {
   n = "NORMAL",
