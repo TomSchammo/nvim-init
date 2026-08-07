@@ -113,6 +113,21 @@ vim.api.nvim_create_autocmd('BufWritePre', {
   end,
 })
 
+-- neovim-lua support
+vim.lsp.config('lua_ls', {
+  settings = {
+    Lua = {
+      runtime = { version = 'LuaJIT' },
+      workspace = {
+        checkThirdParty = false,
+        -- every lua/ dir on the rtp: nvim's own meta files plus the plugins
+        -- added by vim.pack, so require('oil') & co. get types too
+        library = vim.api.nvim_get_runtime_file('lua', true),
+      },
+    },
+  },
+})
+
 vim.lsp.enable({ "lua_ls", "clangd", "rust_analyzer" })
 
 ---------------------------------------------------------------
