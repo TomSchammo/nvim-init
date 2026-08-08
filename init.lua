@@ -368,6 +368,8 @@ vim.pack.add({
 
   -- lsp configurations
   'https://github.com/neovim/nvim-lspconfig',
+
+  'https://github.com/tpope/vim-surround',
 })
 
 ---------------------------------------------------------------
