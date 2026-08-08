@@ -387,6 +387,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
     if client and client:supports_method('textDocument/completion') then
       vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
     end
+    vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
   end,
 })
 
@@ -442,7 +443,15 @@ vim.lsp.config('lua_ls', {
   },
 })
 
-vim.lsp.enable({ "lua_ls", "clangd", "rust_analyzer" })
+local servers = { "lua_ls", "clangd", "rust_analyzer", "pyright", "bashls", "cmake" }
+
+vim.lsp.enable(vim.tbl_filter(function(name)
+  local cfg = vim.lsp.config[name]
+  local cmd = cfg and cfg.cmd
+  -- a few configs use a function for cmd (in-process servers); nothing to look up on PATH
+  if type(cmd) == "table" then return vim.fn.executable(cmd[1]) == 1 end
+  return cmd ~= nil
+end, servers))
 
 ---------------------------------------------------------------
 -- File Explorer
