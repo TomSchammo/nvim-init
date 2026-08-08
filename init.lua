@@ -508,5 +508,5 @@ require("gitsigns").setup({})
 vim.keymap.set("n", "<leader>gd", "<cmd>Gitsigns diffthis<cr>", { desc = "Diff current file against index" })
 vim.keymap.set("n", "<leader>gb", "<cmd>Gitsigns blame<cr>", { desc = "Blame current file in split" })
 vim.keymap.set("n", "<leader>ga", "<cmd>Gitsigns stage_buffer<cr>", { desc = "Stage current buffer?" })
-vim.keymap.set("v", "<leader>gp", "<cmd>Gitsigns stage_hunk<cr>",
+vim.keymap.set("v", "<leader>ga", "<cmd>Gitsigns stage_hunk<cr>",
   { desc = "Stage hunk under cursor/selected in virtual mode" })
