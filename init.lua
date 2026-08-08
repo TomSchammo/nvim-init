@@ -155,6 +155,7 @@ local hl = {
 
   -- syntax; treesitter and LSP captures default-link to these
   Comment               = { fg = c.grey1, italic = true },
+  SpecialComment        = { fg = c.grey1, italic = true },
   Todo                  = { fg = c.yellow, italic = true },
   Error                 = { fg = c.red },
   ["@comment.todo"]     = { fg = c.yellow, italic = false },
