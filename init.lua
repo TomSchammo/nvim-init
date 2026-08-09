@@ -88,6 +88,8 @@ vim.keymap.set("", "<C-w>h", "<C-w>t<C-w>K")
 -- Colorscheme
 ---------------------------------------------------------------
 
+vim.cmd("syntax enable")
+
 vim.o.background = "dark"
 
 local c = {
@@ -188,6 +190,21 @@ local hl = {
 for group, opts in pairs(hl) do
   vim.api.nvim_set_hl(0, group, opts)
 end
+
+-- own groups, so per-language groups like rustTodo/cTodo don't lump them together
+vim.api.nvim_set_hl(0, "MyTodo", { fg = c.yellow })
+vim.api.nvim_set_hl(0, "MyFixme", { fg = c.red })
+vim.api.nvim_set_hl(0, "MyNote", { fg = c.white })
+
+vim.api.nvim_create_autocmd("Syntax", {
+  callback = function()
+    vim.cmd([[
+      syntax keyword MyTodo  TODO XXX          contained containedin=.*Comment.*
+      syntax keyword MyFixme FIXME BUG HACK    contained containedin=.*Comment.*
+      syntax keyword MyNote  NOTE NB SAFETY    contained containedin=.*Comment.*
+    ]])
+  end,
+})
 
 ---------------------------------------------------------------
 -- Status Line
