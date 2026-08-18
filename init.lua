@@ -75,10 +75,10 @@ vim.keymap.set("n", "<leader><up>", "<C-w>k", { noremap = true })
 vim.keymap.set("n", "<leader><right>", "<C-w>l", { noremap = true })
 
 -- Make adjusting split sizes a bit more friendly
-vim.keymap.set("n", "<C-Left>", "<cmd>vertical resize +3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Right>", "<cmd>vertical resize -3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Up>", "<cmd>resize +3<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<C-Down>", "<cmd>resize -3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-h>", "<cmd>vertical resize +3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-l>", "<cmd>vertical resize -3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-k>", "<cmd>resize +3<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<C-j>", "<cmd>resize -3<CR>", { noremap = true, silent = true })
 
 -- Change 2 split windows from vert to horiz or horiz to vert
 vim.keymap.set("", "<C-w>v", "<C-w>t<C-w>H")
