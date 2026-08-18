@@ -406,6 +406,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
       vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
     end
     vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
+    vim.keymap.set("n", "ga", vim.lsp.buf.code_action, { buffer = ev.buf })
   end,
 })
 
