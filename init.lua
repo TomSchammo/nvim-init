@@ -416,7 +416,9 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
 -- diagnostics
 vim.diagnostic.config({ virtual_text = true })
-vim.keymap.set("n", "<leader>E", "<cmd>lua vim.diagnostic.open_float(nil, {focus=false})<cr>", { buffer = bufnr })
+vim.keymap.set("n", "<leader>E", function()
+  vim.diagnostic.open_float(nil, { focus = false })
+end, { desc = "Show diagnostics under cursor" })
 
 
 local function pum(yes, no)
@@ -444,6 +446,41 @@ vim.diagnostic.config({
   float = { border = 'rounded', source = true },
   signs = { text = { [sev.ERROR] = 'E', [sev.WARN] = 'W', [sev.INFO] = 'I', [sev.HINT] = 'H' } },
 })
+
+-- Diagnostics list, in place of `Telescope diagnostics`: every loaded buffer's
+-- diagnostics in a mini.pick window, worst first. Items carry bufnr/lnum/col,
+-- which is all mini.pick's default preview and choose need to jump to them.
+local diag_labels = { [sev.ERROR] = 'E', [sev.WARN] = 'W', [sev.INFO] = 'I', [sev.HINT] = 'H' }
+
+local function pick_diagnostics()
+  local diags = vim.diagnostic.get()
+  table.sort(diags, function(a, b)
+    if a.severity ~= b.severity then return a.severity < b.severity end
+    if a.bufnr ~= b.bufnr then return a.bufnr < b.bufnr end
+    if a.lnum ~= b.lnum then return a.lnum < b.lnum end
+    return a.col < b.col
+  end)
+
+  local items = vim.tbl_map(function(d)
+    local name = vim.api.nvim_buf_get_name(d.bufnr)
+    local path = name ~= '' and vim.fn.fnamemodify(name, ':.') or ('[No Name %d]'):format(d.bufnr)
+    -- multi-line messages (rustc, clangd) would break the one-line-per-item list
+    local msg = d.message:gsub('%s*\n%s*', ' ')
+    return {
+      text = ('%s %s:%d:%d %s'):format(diag_labels[d.severity] or '?', path, d.lnum + 1, d.col + 1, msg),
+      bufnr = d.bufnr,
+      lnum = d.lnum + 1,
+      col = d.col + 1,
+    }
+  end, diags)
+
+  if #items == 0 then
+    return vim.notify('No diagnostics', vim.log.levels.INFO)
+  end
+  MiniPick.start({ source = { items = items, name = 'Diagnostics' } })
+end
+
+vim.keymap.set('n', '<leader>dl', pick_diagnostics, { desc = 'List diagnostics' })
 
 vim.api.nvim_create_autocmd('BufWritePre', {
   callback = function(ev)
