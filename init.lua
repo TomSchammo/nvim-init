@@ -400,6 +400,7 @@ vim.pack.add({
 
 vim.o.autocomplete = true
 vim.o.completeopt = 'menu,menuone,noselect,popup'
+vim.o.complete = 'o,.,w,b,u'
 vim.o.pumborder = 'rounded' -- optional
 vim.o.pummaxwidth = 40      -- optional
 
@@ -407,7 +408,21 @@ vim.api.nvim_create_autocmd('LspAttach', {
   callback = function(ev)
     local client = vim.lsp.get_client_by_id(ev.data.client_id)
     if client and client:supports_method('textDocument/completion') then
-      vim.lsp.completion.enable(true, client.id, ev.buf, { autotrigger = true })
+      vim.lsp.completion.enable(true, client.id, ev.buf, {
+        -- strip clangd's header-insertion decorator from the displayed label
+        convert = function(item)
+          local detail = vim.tbl_get(item, 'labelDetails', 'detail') or ''
+          return { abbr = item.label:gsub('^%s+', ''):gsub('^•%s*', '') .. detail }
+        end,
+        -- LSP items before buffer words; LSP items among themselves by sortText
+        cmp = function(a, b)
+          local ia = vim.tbl_get(a, 'user_data', 'nvim', 'lsp', 'completion_item')
+          local ib = vim.tbl_get(b, 'user_data', 'nvim', 'lsp', 'completion_item')
+          if (ia == nil) ~= (ib == nil) then return ib == nil end
+          if ia == nil then return false end
+          return (ia.sortText or ia.label) < (ib.sortText or ib.label)
+        end,
+      })
     end
     vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf, desc = "Go to definition" })
     vim.keymap.set("n", "ga", vim.lsp.buf.code_action, { buffer = ev.buf })
