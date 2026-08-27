@@ -200,14 +200,17 @@ local c = {
   -- medium
   bg0 = "#282828", -- Normal bg
   bg1 = "#32302f", -- CursorLine
-  bg2 = "#3c3836", -- Visual, Pmenu
+  bg2 = "#3c3836", -- Pmenu
   bg3 = "#504945", -- WinSeparator, borders
+  -- two steps above bg2, so a selection still reads over CursorLine and floats
+  bg4 = "#665c54", -- Visual
 
   -- soft
   -- bg0 = "#32302f", -- Normal bg
   -- bg1 = "#3c3836", -- CursorLine
-  -- bg2 = "#504945", -- Visual, Pmenu
+  -- bg2 = "#504945", -- Pmenu
   -- bg3 = "#665c54", -- WinSeparator, borders
+  -- bg4 = "#7c6f64", -- Visual
 
   white = "#ffffff",  -- NOTE
   fg = "#ebdbb2",     -- Normal fg
@@ -229,7 +232,8 @@ local hl = {
   Normal                = { fg = c.fg, bg = c.bg0 },
   NormalFloat           = { fg = c.fg, bg = c.bg1 },
   CursorLine            = { bg = c.bg1 },
-  Visual                = { bg = c.bg2 },
+  Visual                = { bg = c.bg4 },
+  VisualNOS             = { bg = c.bg4 },
   Pmenu                 = { fg = c.fg, bg = c.bg2 },
   PmenuSel              = { fg = c.bg0, bg = c.blue },
   StatusLine            = { fg = c.fg, bg = c.bg2 },
