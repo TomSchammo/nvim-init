@@ -518,6 +518,8 @@ vim.lsp.config('lua_ls', {
   },
 })
 
+vim.lsp.config('clangd', { cmd = { 'clangd', '--header-insertion-decorators=0' } })
+
 local servers = { "lua_ls", "clangd", "rust_analyzer", "pyright", "bashls", "cmake" }
 
 vim.lsp.enable(vim.tbl_filter(function(name)
