@@ -316,6 +316,8 @@ vim.api.nvim_create_autocmd("Syntax", {
 -- segment colors, brightest first: accent block, raised block, base bar.
 vim.api.nvim_set_hl(0, "StlMode", { fg = c.bg0, bg = c.blue, bold = true })
 vim.api.nvim_set_hl(0, "StlGit", { fg = c.yellow, bg = c.bg3 })
+vim.api.nvim_set_hl(0, "StlMod", { fg = c.grey2, bg = c.bg1 })
+vim.api.nvim_set_hl(0, "StlRO", { fg = c.bg0, bg = c.red, bold = true })
 
 local modes = {
   n = "NORMAL",
@@ -336,6 +338,10 @@ function _G._statusline()
   local branch = vim.b.git_branch and "%#StlGit# " .. vim.b.git_branch .. " %*" or ""
   local path = vim.b.rel_path or "%f"
 
+  -- mod clears itself on write; :w never sets readonly, so RO is unaffected
+  local ro = (vim.bo.readonly or not vim.bo.modifiable) and "%#StlRO# RO %*" or ""
+  local mod = vim.bo.modified and "%#StlMod# [+] %*" or ""
+
   local diag = ""
   local counts = vim.diagnostic.count(0) or {}
   local labels = { " ", " ", " ", " " }
@@ -346,7 +352,7 @@ function _G._statusline()
     end
   end
 
-  return "%#StlMode# " .. mode .. " %*" .. branch .. " " .. path .. "%=" .. diag .. vim.bo.filetype .. " %l:%c"
+  return "%#StlMode# " .. mode .. " %*" .. ro .. branch .. mod .. " " .. path .. "%=" .. diag .. vim.bo.filetype .. " %l:%c"
 end
 
 vim.api.nvim_create_autocmd("BufEnter", {
@@ -362,11 +368,14 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
-  callback = function()
-    vim.cmd("redrawstatus!")
-  end,
-})
+-- diagnostics arrive async, 'modified' flips mid-insert, and 'readonly'
+-- changes only via :set; none of them redraw the bar on their own
+local function redraw()
+  vim.cmd("redrawstatus!")
+end
+
+vim.api.nvim_create_autocmd({ "DiagnosticChanged", "BufModifiedSet" }, { callback = redraw })
+vim.api.nvim_create_autocmd("OptionSet", { pattern = { "readonly", "modifiable" }, callback = redraw })
 
 vim.o.statusline = "%!v:lua._statusline()"
 
