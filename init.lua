@@ -499,7 +499,9 @@ vim.keymap.set('n', '<leader>dl', pick_diagnostics, { desc = 'List diagnostics' 
 
 vim.api.nvim_create_autocmd('BufWritePre', {
   callback = function(ev)
-    vim.lsp.buf.format({ bufnr = ev.buf, timeout_ms = 2000 })
+    if #vim.lsp.get_clients({ bufnr = ev.buf, method = 'textDocument/formatting' }) > 0 then
+      vim.lsp.buf.format({ bufnr = ev.buf, timeout_ms = 2000 })
+    end
   end,
 })
 
