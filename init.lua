@@ -38,11 +38,11 @@ vim.keymap.set("i", "<C-c>", "<Esc>", { noremap = true })
 
 -- remapping <leader>y to copy to clipboard quickly
 vim.keymap.set("n", "<leader>y", '"+y', { noremap = true })
-vim.keymap.set("v", "<leader>y", '"+y', { noremap = true })
+vim.keymap.set("x", "<leader>y", '"+y', { noremap = true })
 
 -- move highlighted blocks using the move command
-vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv")
-vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv")
+vim.keymap.set("x", "J", ":m '>+1<CR>gv=gv")
+vim.keymap.set("x", "K", ":m '<-2<CR>gv=gv")
 
 vim.o.signcolumn = "yes"
 
