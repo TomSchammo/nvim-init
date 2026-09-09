@@ -12,7 +12,7 @@ vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
 
 -- auto indent
-vim.opt.smartindent = true
+vim.opt.autoindent = true
 
 -- search settings
 vim.opt.hlsearch = false
