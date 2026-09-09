@@ -439,7 +439,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
 })
 
 -- diagnostics
-vim.diagnostic.config({ virtual_text = true })
 vim.keymap.set("n", "<leader>E", function()
   vim.diagnostic.open_float(nil, { focus = false })
 end, { desc = "Show diagnostics under cursor" })
