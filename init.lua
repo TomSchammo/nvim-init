@@ -101,13 +101,14 @@ local function disable_visual_nav()
   vim.opt_local.linebreak = false
 end
 
+local wrap_fts = {
+  text = true, markdown = true, tex = true, plaintex = true, typst = true,
+}
+
 local function apply_visual_nav_for_ft()
-  local ft = vim.bo.filetype
-  if ft == "text" or ft == "markdown" or ft == "tex" or ft == "typst" then
-    enable_visual_nav()
-  else
-    disable_visual_nav()
-  end
+  local on = wrap_fts[vim.bo.filetype] or false
+  vim.b.visual_nav_enabled = on
+  if on then enable_visual_nav() else disable_visual_nav() end
 end
 
 local function toggle_visual_nav()
@@ -155,15 +156,6 @@ end, { expr = true })
 vim.keymap.set("x", "$", function()
   return vim.b.visual_nav_enabled and "g$" or "$"
 end, { expr = true })
-
--- Enable for specific filetypes
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "markdown", "plaintex", "tex", "text", "typst" },
-  callback = function()
-    vim.b.visual_nav_enabled = true
-    enable_visual_nav()
-  end,
-})
 
 -- Set initial empty buffer to filetype text
 vim.api.nvim_create_augroup("InitialEmptyBuffer", { clear = true })
