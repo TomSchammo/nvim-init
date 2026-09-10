@@ -2,8 +2,17 @@
 -- General settings
 ---------------------------------------------------------------
 
--- set proper language (UTF-8 clipboard supoort)
-vim.cmd("lang en_US.UTF-8")
+-- set proper language (UTF-8 clipboard supoort) without aborting on error
+local locale = "en_US.UTF-8"
+
+local ok, err = pcall(vim.cmd.language, locale)
+
+if not ok then
+  vim.notify(
+    ("Locale %q is unavailable: %s"):format(locale, err),
+    vim.log.levels.ERROR
+  )
+end
 
 -- setting tab size and so on
 vim.opt.tabstop = 2
