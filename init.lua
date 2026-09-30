@@ -402,6 +402,10 @@ vim.pack.add({
   'https://github.com/neovim/nvim-lspconfig',
 
   'https://github.com/tpope/vim-surround',
+
+  -- markdown rendering (uses nvim's bundled markdown parser, no nvim-treesitter)
+  'https://github.com/MeanderingProgrammer/render-markdown.nvim',
+
 })
 
 ---------------------------------------------------------------
