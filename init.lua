@@ -385,6 +385,18 @@ vim.o.statusline = "%!v:lua._statusline()"
 -- Plugins
 ---------------------------------------------------------------
 
+-- post-install/update hooks; must exist before vim.pack.add to catch the first install
+vim.api.nvim_create_autocmd('PackChanged', {
+  callback = function(ev)
+    local name, kind = ev.data.spec.name, ev.data.kind
+    if name == 'typst-preview.nvim' and (kind == 'install' or kind == 'update') then
+      if not ev.data.active then vim.cmd.packadd(name) end
+      -- downloads the tinymist and websocat binaries the preview needs
+      require('typst-preview').update()
+    end
+  end,
+})
+
 -- install plugins
 vim.pack.add({
   -- dependency for oil
@@ -406,6 +418,9 @@ vim.pack.add({
 
   -- markdown rendering (uses nvim's bundled markdown parser, no nvim-treesitter)
   'https://github.com/MeanderingProgrammer/render-markdown.nvim',
+
+  -- live typst preview in the browser
+  'https://github.com/chomosuke/typst-preview.nvim',
 
 })
 
@@ -602,3 +617,16 @@ vim.keymap.set("n", "<leader>gb", "<cmd>Gitsigns blame<cr>", { desc = "Blame cur
 vim.keymap.set("n", "<leader>ga", "<cmd>Gitsigns stage_buffer<cr>", { desc = "Stage current buffer?" })
 vim.keymap.set("v", "<leader>ga", "<cmd>Gitsigns stage_hunk<cr>",
   { desc = "Stage hunk under cursor/selected in virtual mode" })
+
+---------------------------------------------------------------
+-- Typst
+---------------------------------------------------------------
+
+local tinymist = vim.fn.exepath('tinymist')
+
+require('typst-preview').setup({
+  dependencies_bin = {
+    -- prefer a tinymist on PATH; nil falls back to the one update() downloaded
+    tinymist = tinymist ~= '' and tinymist or nil,
+  },
+})
