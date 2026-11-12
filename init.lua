@@ -394,6 +394,18 @@ vim.api.nvim_create_autocmd('PackChanged', {
       -- downloads the tinymist and websocat binaries the preview needs
       require('typst-preview').update()
     end
+    -- tree-sitter-yaml ships only C sources: build parser/yaml.so and put the
+    -- highlights where nvim looks for them, both found via the rtp
+    if name == 'tree-sitter-yaml' and (kind == 'install' or kind == 'update') then
+      local dir = ev.data.path
+      vim.fn.mkdir(dir .. '/parser', 'p')
+      vim.fn.mkdir(dir .. '/queries/yaml', 'p')
+      vim.uv.fs_copyfile(dir .. '/queries/highlights.scm', dir .. '/queries/yaml/highlights.scm')
+      vim.system({
+        'cc', '-o', dir .. '/parser/yaml.so', '-shared', '-fPIC', '-O2', '-I', dir .. '/src',
+        dir .. '/src/parser.c', dir .. '/src/scanner.c',
+      }):wait()
+    end
   end,
 })
 
@@ -425,6 +437,9 @@ vim.pack.add({
 
   -- live typst preview in the browser
   'https://github.com/chomosuke/typst-preview.nvim',
+
+  -- yaml parser for render-markdown's front matter (nvim bundles no yaml parser)
+  'https://github.com/tree-sitter-grammars/tree-sitter-yaml',
 
 })
 
