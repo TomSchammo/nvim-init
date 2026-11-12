@@ -419,6 +419,10 @@ vim.pack.add({
   -- markdown rendering (uses nvim's bundled markdown parser, no nvim-treesitter)
   'https://github.com/MeanderingProgrammer/render-markdown.nvim',
 
+  -- snippet collections (VSCode JSON), served by the in-process server under Snippets
+  'https://github.com/rafamadriz/friendly-snippets',
+  'https://github.com/tomschammo/custom-snippets',
+
   -- live typst preview in the browser
   'https://github.com/chomosuke/typst-preview.nvim',
 
@@ -560,6 +564,167 @@ vim.lsp.enable(vim.tbl_filter(function(name)
   if type(cmd) == "table" then return vim.fn.executable(cmd[1]) == 1 end
   return cmd ~= nil
 end, servers))
+
+---------------------------------------------------------------
+-- Snippets
+---------------------------------------------------------------
+
+-- Snippets that need Lua, on top of the VSCode JSON ones from friendly-snippets
+-- and custom-snippets. LSP snippet syntax: $1, ${1:default}, $0 = final cursor;
+-- a function body is evaluated each time completion runs. `all` applies everywhere.
+local function header_guard()
+  local guard = vim.fn.expand("%:t"):upper():gsub("[^%w]", "_")
+  return "#ifndef ${1:" .. guard .. "}\n#define $1\n\n$0\n\n#endif // $1"
+end
+
+local snippets = {
+  c = { header_guard = header_guard },
+  cpp = { header_guard = header_guard },
+}
+
+-- postfix snippets: `"x = {x}".print` -> `std::println("x = {}", x);`
+-- each gets the literal with {names} turned into {}, and ", names" (or "")
+local postfix = {
+  cpp = {
+    fmt = function(str, args) return ("std::format(%s%s);"):format(str, args) end,
+    print = function(str, args) return ("std::println(%s%s);"):format(str, args) end,
+  },
+}
+
+local function read_json(path)
+  local ok, json = pcall(vim.json.decode, table.concat(vim.fn.readfile(path), "\n"))
+  return ok and json or {}
+end
+
+-- VSCode snippet packages on the rtp: each package.json maps languages to snippet files
+local cache = {}
+local function load_snippets(ft)
+  if cache[ft] then return cache[ft] end
+  local snips = {}
+  for _, pkg in ipairs(vim.api.nvim_get_runtime_file("package.json", true)) do
+    for _, entry in ipairs(vim.tbl_get(read_json(pkg), "contributes", "snippets") or {}) do
+      local langs = type(entry.language) == "table" and entry.language or { entry.language }
+      if vim.list_contains(langs, ft) or vim.list_contains(langs, "all") then
+        for _, s in pairs(read_json(vim.fs.joinpath(vim.fs.dirname(pkg), entry.path))) do
+          local body = type(s.body) == "table" and table.concat(s.body, "\n") or s.body
+          for _, prefix in ipairs(type(s.prefix) == "table" and s.prefix or { s.prefix }) do
+            snips[prefix] = body
+          end
+        end
+      end
+    end
+  end
+  cache[ft] = vim.tbl_extend("force", snips, snippets.all or {}, snippets[ft] or {})
+  return cache[ft]
+end
+
+-- VSCode snippet variables vim.snippet doesn't know (it only resolves TM_*);
+-- strings are os.date formats
+local snippet_vars = {
+  CURRENT_YEAR = "%Y",
+  CURRENT_YEAR_SHORT = "%y",
+  CURRENT_MONTH = "%m",
+  CURRENT_MONTH_NAME = "%B",
+  CURRENT_MONTH_NAME_SHORT = "%b",
+  CURRENT_DATE = "%d",
+  CURRENT_DAY_NAME = "%A",
+  CURRENT_DAY_NAME_SHORT = "%a",
+  CURRENT_HOUR = "%H",
+  CURRENT_MINUTE = "%M",
+  CURRENT_SECOND = "%S",
+  CURRENT_SECONDS_UNIX = "%s",
+  RANDOM = function() return ("%06d"):format(math.random(0, 999999)) end,
+  UUID = function()
+    return (("xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"):gsub("[xy]", function(c)
+      return ("%x"):format(c == "x" and math.random(0, 15) or math.random(8, 11))
+    end))
+  end,
+  CLIPBOARD = function() return vim.fn.getreg("+") end,
+  BLOCK_COMMENT_START = function() return vim.bo.commentstring:match("^(.-)%s*%%s") end,
+  BLOCK_COMMENT_END = function() return vim.bo.commentstring:match("%%s%s*(.-)$") end,
+  WORKSPACE_NAME = function() return vim.fs.basename(vim.fn.getcwd()) end,
+}
+
+-- replace $NAME, ${NAME} and ${NAME:default} for the variables above; unknown
+-- ones stay for vim.snippet. Values are escaped so they stay literal text.
+local function resolve_vars(body)
+  local function value(name)
+    local v = snippet_vars[name]
+    if not v then return end
+    v = type(v) == "function" and v() or os.date(v)
+    return (v:gsub("[$}\\]", "\\%0"))
+  end
+  return (body:gsub("%${(%u[%u_]*):?[^}]*}", value):gsub("%$(%u[%u_]*)", value))
+end
+
+local function completion_items(pos)
+  local ft = vim.bo.filetype
+  local items = {}
+
+  -- a string literal right before the cursor, followed by `.` and maybe part of
+  -- a name: offer only the postfix snippets, replacing the literal and the `.name`
+  local before = vim.api.nvim_get_current_line():sub(1, pos.character)
+  local start, literal = before:match('()("[^"]*")%.%a*$')
+  if start and postfix[ft] then
+    local names = {}
+    local str = literal:gsub("{([^}]+)}", function(name)
+      names[#names + 1] = name
+      return "{}"
+    end)
+    local args = #names > 0 and ", " .. table.concat(names, ", ") or ""
+    local range = { start = { line = pos.line, character = start - 1 }, ["end"] = pos }
+    for name, expand in pairs(postfix[ft]) do
+      items[#items + 1] = {
+        label = "." .. name,
+        filterText = literal .. "." .. name,
+        kind = 15,
+        textEdit = { range = range, newText = expand(str, args) },
+      }
+    end
+    return items
+  end
+
+  for label, body in pairs(load_snippets(ft)) do
+    if type(body) == "function" then body = body() end
+    items[#items + 1] = { label = label, kind = 15, insertText = resolve_vars(body), insertTextFormat = 2 }
+  end
+  return items
+end
+
+-- in-process LSP server: answers completion with the snippets for the buffer's
+-- filetype; vim.lsp.completion (enabled on LspAttach above) shows and expands them
+local function snippet_server()
+  local id = 0
+  return {
+    -- the client tracks requests by id and expects replies to arrive later,
+    -- like a real server's would
+    request = function(method, params, cb)
+      local result
+      if method == "initialize" then
+        -- utf-8 positions are byte columns, so they index the line directly
+        result = { capabilities = { positionEncoding = "utf-8", completionProvider = {} } }
+      elseif method == "textDocument/completion" then
+        -- completion always runs in the current buffer; its URI can't be
+        -- mapped back for unnamed buffers
+        result = completion_items(params.position)
+      end
+      id = id + 1
+      vim.schedule(function() cb(nil, result) end)
+      return true, id
+    end,
+    notify = function() end,
+    is_closing = function() return false end,
+    terminate = function() end,
+  }
+end
+
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(ev)
+    if vim.bo[ev.buf].buftype == "" then
+      vim.lsp.start({ name = "snippets", cmd = snippet_server }, { bufnr = ev.buf })
+    end
+  end,
+})
 
 ---------------------------------------------------------------
 -- File Explorer
